@@ -78,9 +78,17 @@ testPuzzleMake1 = do
   let clusterID = hash cluster
       frogID = hash frog
       puzzle = makePuzzle "Bra1nDump" [cluster, centaurus]
-      niceMask = mineLink 3 gen 1000 clusterID frogID puzzle
+      niceMask = mineLink 3 gen 10000 clusterID frogID puzzle
   print niceMask
+  display $ applyMasks niceMask cluster
+  print $ hashWithMask niceMask cluster
+  print $ hashWithMask [(99,5,150,94),(74,126,74,250),(84,168,116,223)] cluster
+  print $ hashWithMask [(231,73,260,199),(217,171,255,231),(27,7,265,33)] cluster
+  print frogID
 
 main :: IO ()
 main = do
+
+
+
   testPuzzleMake1
