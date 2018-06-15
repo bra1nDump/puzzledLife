@@ -1,32 +1,28 @@
 module Piece
   ( Piece(..)
-  , Mask(..)
---  , hash
-  , fromList
+  , PieceID
   , applyMask
+  , hash
   ) where
 
 import Data.Bits
-
 import Graphics.Image as I
+import Graphics.Image.Interface as II
 import Graphics.Image.ColorSpace as CS
 
+import Mask
+
+type PieceID = Word64
 type Piece = Image VU RGB Double
 
-type Mask = Image VU X Bit
-
-fromList :: (Int,Int) -> [(Int,Int,Int,Int)] -> Mask
-fromList dimensions [] =
-  makeImageR VU dimensions $ const off
-fromList dimensions ((x1,y1,x2,y2):masks) = let
-  maskImage = makeImageR VU dimensions
-    (\(x,y) -> if x1 <= x && x <= x2 && y1 <= y && y <= y2 then
-                on
-              else
-                off)
-  in I.zipWith (\p1 p2 -> if xor (isOn p1) (isOn p2)
-                        then on else off)
-     maskImage $ fromList dimensions masks
-
 applyMask :: Mask -> Piece -> Piece
-applyMask = I.zipWith (\maskPixel p -> if isOn maskPixel then p else PixelRGB 255 255 255)
+applyMask = I.zipWith (\maskBit p -> if isOn maskBit
+                        then p
+                        else PixelRGB 255 255 255)
+
+hash :: PieceID -> Piece -> PieceID
+hash seed piece = let
+  pieceWord8 = II.map ((<$>) toWord8) piece
+  in II.foldl hashPixel seed pieceWord8
+     where hashPixel hash (PixelRGB r g b) =
+             (hash + fromIntegral (r + g + b)) `mod` 1000000)

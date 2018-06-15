@@ -1,24 +1,14 @@
 module Main where
 
-import System.Random
-
 import Lib
+
+import System.Random
 import Piece
 import Puzzle
 import Prelude as P
 import Graphics.Image
 import Graphics.Image.Interface
 import Graphics.Image.IO
-
--- displayImageUsing
--- :: (Array VS cs e, Array arr cs e, Writable (Image VS cs e) TIF)
--- => ExternalViewer
--- External viewer to use
--- -> Bool
--- Should the call be blocking
--- -> Image arr cs e
--- Image to display
--- -> IO ()
 
 projectRoot = "/Users/kirill/root/programming/projects/puzzledLife/"
 viewer = ExternalViewer "open" [] 0
@@ -71,14 +61,15 @@ testPieceHash1 = do
 
 testPuzzleMake1 :: IO ()
 testPuzzleMake1 = do
-  cluster <- cluster
+  line <- getLine :: IO String
+  cluster <- cluster :: IO Piece
   centaurus <- centaurus
   frog <- frog
   gen <- getStdGen
   let clusterID = hash cluster
       frogID = hash frog
       puzzle = makePuzzle "Bra1nDump" [cluster, centaurus]
-      niceMask = mineLink 3 gen 10000 clusterID frogID puzzle
+      niceMask = mineLink 3 gen 1000 clusterID frogID puzzle
   print niceMask
   display $ applyMasks niceMask cluster
   print $ hashWithMask niceMask cluster
@@ -86,9 +77,21 @@ testPuzzleMake1 = do
   print $ hashWithMask [(231,73,260,199),(217,171,255,231),(27,7,265,33)] cluster
   print frogID
 
+
+rand :: (Int,Int) -> StdGen -> (Int,StdGen)
+rand bounds gen = randomR bounds gen
+
 main :: IO ()
 main = do
-
-
-
-  testPuzzleMake1
+  gen <- getStdGen
+  let (x,gen') = rand (1,10) gen
+      (y,_) = rand (1,10) gen
+      (z,_) = rand (1,10) gen'
+  print [x,y,z]
+  let a = [1,2,5]
+      b = [43,5]
+  print $ [(x,y) | x <- a, y <- b]
+  print $ do x <- a
+             y <- b
+             [(x,y)]
+  print $ a >>= (\x -> b >>= (\y -> [(x,y)]))

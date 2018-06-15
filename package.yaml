@@ -22,6 +22,9 @@ description:         Please see the README on GitHub at <https://github.com/gith
 dependencies:
 - base >= 4.7 && < 5
 - hip
+- random
+- containers
+- happstack-server
 
 library:
   source-dirs: src
@@ -36,7 +39,6 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - puzzledLife
-    - hip
 
 tests:
   puzzledLife-test:
