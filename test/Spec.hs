@@ -10,25 +10,6 @@ import Graphics.Image
 import Graphics.Image.Interface
 import Graphics.Image.IO
 
-testAssetDirectory = "./assets/test/"
-
-viewer = ExternalViewer "open" [] 0
-
-display :: [Piece] -> IO ()
-display images =
-  forM_ images $ displayImageUsing viewer True image
-
-readPieces :: [String] -> IO [Piece]
-readPieces = flip forM getImage
-  where getImage = readImageRGB VU . (testAssetDirectory ++)
-
-samplePieces :: IO [Piece]
-samplePieces = readPieces
-  [ "cluster.jpg"
-  , "centaurus.jpg"
-  , "frog.jpg"
-  ]
-
 sampleMask = [(10,10,200,100), (12,5,150,200), (40,40,70,70)]
 
 

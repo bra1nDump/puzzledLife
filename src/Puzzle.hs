@@ -1,49 +1,50 @@
 module Puzzle
   ( Puzzle(..)
   , makePuzzle
-  , mineLink
+  , readPuzzle
+  , writePuzzle
   ) where
 
+import Control.Monad
+import Control.Monad.Trans.Maybe
+import qualified Data.List as List
 import qualified Data.Map as Map
-import Data.Bits
-import System.Random
-import Data.Word
-import Graphics.Image as I
+import Piece
+import System.Directory
+
 import Debug.Trace
 
-import Piece
-
-instance (Random a, Random b, Random c, Random d) => Random (a,b,c,d) where
-  randomR ((a1, a2, a3, a4), (a1', a2', a3', a4')) gen1 =
-    let (a1'', gen2) = randomR (a1, a1') gen1
-        (a2'', gen3) = randomR (a2, a2') gen2
-        (a3'', gen4) = randomR (a3, a3') gen3
-        (a4'', gen5) = randomR (a4, a4') gen4
-    in ((a1'',a2'',a3'',a4''), gen5)
-
 data Puzzle = Puzzle
-  { author :: String
+  { title :: String
   , pieces :: Map.Map PieceID Piece
   }
 
 makePuzzle :: String -> [Piece] -> Puzzle
-makePuzzle author pieces = Puzzle
-  { author=author
-  , pieces=Map.fromList [(id,piece) | piece <- pieces, let id = hash piece]
+makePuzzle title pieces = Puzzle
+  { title = title
+  , pieces = Map.fromList
+             [(id,piece) | piece <- pieces, let id = hash 0 piece]
   }
 
-mineLink :: Int -> StdGen -> Word64 -> PieceID -> PieceID -> Puzzle -> [Rect]
-mineLink maskCount gen percision sourceID targetID puzzle = let
-  Just source = Map.lookup sourceID $ pieces puzzle
-  (rows,columns)= I.dims source
-  randomMasks = filter (\(x1,y1,x2,y2) -> x1 <= x2 && y1 <= y2)
-    . randomRs ((0,0,0,0),(rows-1,columns-1,rows-1,columns-1)) $ gen
-  setsOfMarks = partition maskCount randomMasks
-    where partition n arr =
-            let (xs,ys) = splitAt n arr
-            in xs:partition n ys
-  in head $ dropWhile (\masks -> let
-                          subPieceHash = hashWithMask masks source
-                          divergence = xor targetID subPieceHash
-                          in trace (show divergence) percision < divergence)
-     setsOfMarks
+puzzlesDirectory = "data/puzzles/"
+
+readPuzzle :: String -> IO (Maybe Puzzle)
+readPuzzle title = do
+  let imagesDirectory = puzzlesDirectory ++ title ++ "/images/"
+  puzzleImagesExist <- doesDirectoryExist $ imagesDirectory
+  if not puzzleImagesExist
+    then return Nothing
+    else do
+    images <- filter (not . List.isPrefixOf ".") <$> listDirectory imagesDirectory
+    print images
+    pieces <- sequence . map readPiece . map (imagesDirectory ++) $ images
+    return . Just . makePuzzle title $ pieces
+
+writePuzzle :: Puzzle -> IO ()
+writePuzzle puzzle = do
+  let title' = title puzzle
+      pieces' = Map.assocs . Map.mapKeys setPiecePath . pieces $ puzzle
+        where setPiecePath hash =
+                let path = puzzlesDirectory ++ title' ++ "/" ++ (show hash) ++ ".jpg"
+                in trace path path
+  forM_ pieces' (\(path,piece) -> writePiece path piece)

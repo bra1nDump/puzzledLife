@@ -14,7 +14,7 @@ testPieceMask pieces =
   let mask = fromList (dims cluster) sampleMask
   display $ applyMasks mask cluster
 
-testPieceHash1 :: [Piece] -> []
+testPieceHash1 :: [Piece] -> IO ()
 testPieceHash1 = do
   let clusterID = hash cluster
       centaurusID = hash centaurus

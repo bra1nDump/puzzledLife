@@ -25,6 +25,8 @@ dependencies:
 - random
 - containers
 - happstack-server
+- directory
+- transformers
 
 library:
   source-dirs: src
