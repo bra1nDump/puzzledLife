@@ -14,6 +14,8 @@ import Graphics.Image.Interface as Interface
 import Mask
 import Piece
 
+import Debug.Trace
+
 data MiningConfig = MiningConfig
   { targetStayAheadBits :: Word64
   , minMaskCount :: Int
@@ -21,20 +23,21 @@ data MiningConfig = MiningConfig
   }
 
 mineLink :: StdGen -> Piece -> PieceID -> Word64 -> [Rect]
-mineLink gen source targetID stayAheadBits = let
-  (rows,columns) = Image.dims source
-  (maskCount,gen') = random gen
-  rectangles = filter (\(x1,y1,x2,y2) -> x1 <= x2 && y1 <= y2)
-    . randomRs ((0,0,0,0),(rows-1,columns-1,rows-1,columns-1)) $ gen'
-  maskGroups = partition maskCount rectangles
-    where partition n arr =
-            let (xs,ys) = splitAt n arr
-            in xs:partition n ys
-  in head $ dropWhile matchRequestNotMet maskGroups
-     where matchRequestNotMet maskGroup = let
-             constructedMask = mask (Image.dims source) maskGroup
-             divergence = xor targetID $ hash 0 $ applyMask constructedMask source
-             in stayAheadBits < divergence
+mineLink = undefined
+-- mineLink gen source targetID stayAheadBits = let
+--   (rows,columns) = Image.dims source
+--   (maskCount,gen') = random gen
+--   rectangles = filter (\(x1,y1,x2,y2) -> x1 <= x2 && y1 <= y2)
+--     . randomRs ((0,0,0,0),(rows-1,columns-1,rows-1,columns-1)) $ gen'
+--   maskGroups = partition maskCount rectangles
+--     where partition n arr =
+--             let (xs,ys) = splitAt n arr
+--             in xs:partition n ys
+--   in head $ dropWhile matchRequestNotMet maskGroups
+--      where matchRequestNotMet maskGroup = let
+--              constructedMask = mask (Image.dims source) maskGroup
+--              divergence = xor targetID $ hash 0 $ applyMask constructedMask source
+--              in stayAheadBits < divergence
 
 
 bestMatch :: PieceID -> [PieceID] -> (PieceID,Word64)

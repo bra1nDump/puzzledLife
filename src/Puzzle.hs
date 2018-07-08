@@ -3,14 +3,19 @@ module Puzzle
   , makePuzzle
   , readPuzzle
   , writePuzzle
+  , transition
   ) where
 
 import Control.Monad
 import Control.Monad.Trans.Maybe
 import qualified Data.List as List
 import qualified Data.Map as Map
+
+import Mask
+import Link
 import Piece
 import System.Directory
+import System.FilePath
 
 import Debug.Trace
 
@@ -20,31 +25,33 @@ data Puzzle = Puzzle
   }
 
 makePuzzle :: String -> [Piece] -> Puzzle
-makePuzzle title pieces = Puzzle
-  { title = title
+makePuzzle title' pieces = Puzzle
+  { Puzzle.title = title'
   , pieces = Map.fromList
-             [(id,piece) | piece <- pieces, let id = hash 0 piece]
+             [(id,piece) | piece <- pieces, let id = hash $ image piece]
   }
 
-puzzlesDirectory = "data/puzzles/"
+readPuzzle :: FilePath -> IO Puzzle
+readPuzzle puzzlePath = do
+  let puzzleTitle = last . splitDirectories $ puzzlePath
+  piecesNames <- filter (not . List.isPrefixOf ".") <$> listDirectory puzzlePath
+  print piecesNames
+  pieces <- sequence . map (readPiece . (</>) puzzlePath) $ piecesNames
+  return $ makePuzzle puzzleTitle pieces
 
-readPuzzle :: String -> IO (Maybe Puzzle)
-readPuzzle title = do
-  let imagesDirectory = puzzlesDirectory ++ title ++ "/images/"
-  puzzleImagesExist <- doesDirectoryExist $ imagesDirectory
-  if not puzzleImagesExist
-    then return Nothing
-    else do
-    images <- filter (not . List.isPrefixOf ".") <$> listDirectory imagesDirectory
-    print images
-    pieces <- sequence . map readPiece . map (imagesDirectory ++) $ images
-    return . Just . makePuzzle title $ pieces
+writePuzzle :: FilePath -> Puzzle -> IO ()
+writePuzzle puzzlePath puzzle = do
+  let title' = Puzzle.title puzzle
+      pieces' = pieces puzzle
+  forM_ pieces' $ writePiece $ puzzlePath </> title'
 
-writePuzzle :: Puzzle -> IO ()
-writePuzzle puzzle = do
-  let title' = title puzzle
-      pieces' = Map.assocs . Map.mapKeys setPiecePath . pieces $ puzzle
-        where setPiecePath hash =
-                let path = puzzlesDirectory ++ title' ++ "/" ++ (show hash) ++ ".jpg"
-                in trace path path
-  forM_ pieces' (\(path,piece) -> writePiece path piece)
+transition :: PieceID -> [Rect] -> Puzzle -> Maybe String
+transition pieceID frames puzzle = do
+  piece <- Map.lookup pieceID $ pieces puzzle
+  let pieceImage = image piece
+      subpieceID = hash $ subpiece frames pieceImage
+  let nextVertice = show . fst
+        . bestMatch subpieceID
+        . filter (/= pieceID)
+        . Map.keys . pieces $ puzzle
+  return nextVertice

@@ -27,6 +27,7 @@ dependencies:
 - happstack-server
 - directory
 - transformers
+- filepath
 
 library:
   source-dirs: src

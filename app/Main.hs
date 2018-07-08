@@ -1,13 +1,10 @@
 module Main where
 
 import Lib
-import Puzzle
-import Server (server)
+import Gallery
+import Server (serve)
 
 main :: IO ()
 main = do
-  braindump <- readPuzzle "braindump"
-  case braindump of
-    Nothing -> error "sheeet"
-    Just puzzle -> writePuzzle puzzle
-  server
+  gallery <- readGallery "data/puzzles.submissions"
+  serve gallery

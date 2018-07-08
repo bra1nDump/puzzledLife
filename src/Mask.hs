@@ -13,8 +13,8 @@ import Data.Bits
 import Graphics.Image as Image
 import Graphics.Image.Interface as Interface
 
-type Mask = Image VS X Bit
 type Rect = (Int,Int,Int,Int)
+type Mask = Image VS X Bit
 
 to4Tuple :: [a] -> (a,a,a,a)
 to4Tuple (x1:x2:x3:x4:_) = (x1,x2,x3,x4)

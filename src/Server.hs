@@ -1,51 +1,54 @@
 module Server
-  (server)
-  where
+  ( serve ) where
 
 import Control.Monad
 import Control.Monad.Trans.Class
 import Happstack.Server.RqData
 import Happstack.Server
+import System.FilePath
 
 import Lib
 import Mask
 import Piece
-import Link
 import Puzzle
+import Gallery
 import qualified Data.Map as Map
 
-server :: IO ()
-server = simpleHTTP nullConf router
+galleryDirectory = "data/puzzles.public"
 
-pieceHandler = uriRest $ \piecePath ->
-  serveFile (guessContentTypeM mimeTypes) $ "data/puzzles/" ++ piecePath
+serve :: Gallery -> IO ()
+serve gallery = do
+  writeGallery galleryDirectory gallery
+  simpleHTTP nullConf $ router gallery
 
-linkHandler = path $ \puzzleTitle -> do
-  Just puzzle <- lift $ readPuzzle puzzleTitle
+pieceHandler = uriRest $ \piecePath -> do
+  let absolutePath =  galleryDirectory </> makeRelative "/" piecePath
+      filename = takeFileName absolutePath
+  lift $ print absolutePath
+  if filename == "readme.md"
+    then do
+    readmeContents <- lift $ readFile absolutePath
+    ok . toResponse $ readmeContents
+    else
+    serveFile (guessContentTypeM mimeTypes) $ absolutePath
+
+linkHandler :: Gallery -> ServerPartT IO Response
+linkHandler (Gallery puzzles) = path $ \puzzleTitle -> do
+  let puzzle = head . filter ((==) puzzleTitle. Puzzle.title) $ puzzles
   path $ \pieceID -> do
-    x1 <- lookRead "x1"
-    y1 <- lookRead "y1"
-    x2 <- lookRead "x2"
-    y2 <- lookRead "y2"
+    [x1, y1, x2, y2] <- mapM lookRead ["x1", "y1", "x2", "y2"]
     let rect = (x1, y1, x2, y2) :: Rect
         _ = pieceID :: PieceID
     lift $ print rect
-    case Map.lookup pieceID $ pieces puzzle of
+    case transition pieceID [rect] puzzle of
+      Just nextPiece -> do
+        lift $ print nextPiece
+        ok . toResponse $ nextPiece
       Nothing -> do
-        lift $ print $ "this is baad piece not found"
-        badRequest $ toResponse "Piece with this ID is not part of the puzzle"
-      Just piece -> do
-        let pieceID = hash 0 piece
-            requestedSubpiece = subpiece [rect] piece
-            requestedSubpieceID = hash 0 requestedSubpiece
-        lift $ print $ show pieceID
-        lift $ print $ "subpieceID" ++ show requestedSubpieceID
-        let nextVertice =  show . fst . bestMatch pieceID . filter (/= pieceID) . Map.keys . pieces $ puzzle
-        lift $ print nextVertice
-        ok . toResponse $ nextVertice
+        badRequest $ toResponse "Your transition failed"
 
-router :: ServerPartT IO Response
-router = msum
+router :: Gallery -> ServerPartT IO Response
+router gallery = msum
   [ dir "puzzles" pieceHandler
-  , dir "link" linkHandler
+  , dir "link" $ linkHandler gallery
   ]
