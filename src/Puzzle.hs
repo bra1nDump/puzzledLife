@@ -52,6 +52,5 @@ transition pieceID frames puzzle = do
       subpieceID = hash $ subpiece frames pieceImage
   let nextVertice = show . fst
         . bestMatch subpieceID
-        . filter (/= pieceID)
         . Map.keys . pieces $ puzzle
   return nextVertice

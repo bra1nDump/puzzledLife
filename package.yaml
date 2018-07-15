@@ -28,6 +28,9 @@ dependencies:
 - directory
 - transformers
 - filepath
+- aeson
+- bytestring
+- exceptions
 
 library:
   source-dirs: src

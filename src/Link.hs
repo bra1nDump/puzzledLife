@@ -46,4 +46,3 @@ bestMatch source targets =
   . zip targets
   . List.map (xor source)
   $ targets
-
