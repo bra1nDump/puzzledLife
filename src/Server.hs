@@ -81,8 +81,7 @@ linkHandler (Gallery puzzles) = do
 
 router :: Gallery -> ServerPartT IO Response
 router gallery = msum
-  [ dir "public" $ serveDirectory DisableBrowsing ["index.html", "main.js"] "frontend/build"
-  , dir "puzzles" pieceHandler
+  [ dir "puzzles" pieceHandler
   , dir "link" $ linkHandler gallery
   ]
 
