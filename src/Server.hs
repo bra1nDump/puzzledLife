@@ -23,6 +23,8 @@ import Puzzle
 import Gallery
 import qualified Data.Map as Map
 
+data PieceComponent = Image | Readme
+
 data Frame = Frame
   { x1 :: Int
   , y1 :: Int
@@ -47,42 +49,36 @@ serve gallery = do
     decodeBody (defaultBodyPolicy "/tmp/" 4096 4096 4096)
     router gallery
 
-pieceHandler = uriRest $ \piecePath -> do
-  let absolutePath =  galleryDirectory </> makeRelative "/" piecePath
-      filename = takeFileName absolutePath
-  lift $ print absolutePath
-  if filename == "readme.md"
-    then do
-    readmeContents <- lift $ readFile absolutePath
-    ok . toResponse $ readmeContents
-    else
-    serveFile (guessContentTypeM mimeTypes) $ absolutePath
+pieceHandler :: String -> String -> PieceComponent -> ServerPartT IO Response
+pieceHandler puzzleId pieceId component = do
+  let piecePath = galleryDirectory </> puzzleId </> pieceId
+  case component of
+    Readme -> do
+      readmeContents <- lift $ readFile $ piecePath </> "readme.md"
+      ok . toResponse $ readmeContents
+    Image ->
+      serveFile (guessContentTypeM mimeTypes) $ piecePath </> "image.jpg"
 
-linkHandler :: Gallery -> ServerPartT IO Response
-linkHandler (Gallery puzzles) = do
-  path $ \puzzleTitle -> do
-    let puzzle = head . filter ((==) puzzleTitle . Puzzle.title) $ puzzles
-    path $ \pieceID -> do
-      (Just (Frames frames)) <- lookFrames
-                              --(\ioError -> do {lift $ print ioError >> return Nothing})
-      lift $ print frames
-      let rects = map
-            (\(Frame {x1,y1,x2,y2}) -> (x1, y1, x2, y2) :: Rect)
-            frames
-          _ = pieceID :: PieceID
-      lift $ print rects
-      --method POST
-      case transition pieceID rects puzzle of
-        Just nextPiece -> do
-          lift $ print nextPiece
-          ok . toResponse $ nextPiece
-        Nothing -> do
-          badRequest $ toResponse "Your transition failed"
+linkHandler :: Gallery -> String -> String -> ServerPartT IO Response
+linkHandler (Gallery puzzles) puzzleId pieceId = do
+    let puzzle = head . filter ((==) puzzleId . Puzzle.title) $ puzzles
+    (Just (Frames frames)) <- lookFrames
+    let rects = map
+          (\(Frame {x1,y1,x2,y2}) -> (x1, y1, x2, y2) :: Rect)
+          frames
+    case transition (read pieceId) rects puzzle of
+      Just nextPiece -> do
+        lift $ print nextPiece
+        ok . toResponse $ nextPiece
+      Nothing -> do
+        badRequest $ toResponse "Your transition failed"
 
 router :: Gallery -> ServerPartT IO Response
-router gallery = msum
-  [ dir "puzzles" pieceHandler
-  , dir "link" $ linkHandler gallery
+router gallery = dir "puzzles" $ path $ \puzzleId -> path $ \pieceId ->
+  msum
+  [ dir "readme" $ pieceHandler puzzleId pieceId Readme
+  , dir "image" $ pieceHandler puzzleId pieceId Image
+  , dir "next" $ linkHandler gallery puzzleId pieceId
   ]
 
 -- Helpers
@@ -90,6 +86,4 @@ lookFrames :: ServerPartT IO (Maybe Frames)
 lookFrames = do
   request <- askRq
   (Just body) <- lift $ takeRequestBody request
-  lift $ print body
-  lift . print . unBody $ body
   return . decode . unBody $ body
